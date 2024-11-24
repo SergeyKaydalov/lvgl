@@ -249,6 +249,24 @@ void lv_linux_fbdev_set_force_refresh(lv_display_t * disp, bool enabled)
  *   STATIC FUNCTIONS
  **********************/
 
+#if LV_LINUX_RB_SWAP_16
+/* Convert a pixel from RGB565 to BGR565 */
+static uint16_t rb_swap(uint16_t x)
+{
+       return (x & 0x1f) << 11 | (x >> 11) | (x & 0x7e0);
+}
+
+static void rgb_to_bgr(void * buf, uint32_t buf_size_px)
+{
+       uint16_t *u16_buf = (uint16_t*)buf;
+       while(buf_size_px-- != 0) {
+               *u16_buf = rb_swap(*u16_buf);
+               u16_buf++;
+       }
+}
+#endif
+
+
 static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * color_p)
 {
     lv_linux_fb_t * dsc = lv_display_get_driver_data(disp);
@@ -259,6 +277,9 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * colo
         lv_display_flush_ready(disp);
         return;
     }
+#if LV_LINUX_RB_SWAP_16
+    rgb_to_bgr(color_p, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1));
+#endif
 
     int32_t w = lv_area_get_width(area);
     uint32_t px_size = lv_color_format_get_size(lv_display_get_color_format(disp));
